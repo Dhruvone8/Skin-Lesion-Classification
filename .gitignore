@@ -1,0 +1,54 @@
+# ==============================================================================
+# Skin Lesion Classification - .gitignore
+# ==============================================================================
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Streamlit runtime / local cache
+.streamlit/
+!.streamlit/config.toml
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# Operating System generated files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Testing & Profiling
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# ==============================================================================
+# Model Weights Note:
+# Model files (*.keras) are ~35.5 MB.
+# - If pushing to standard GitHub without Git LFS, GitHub allows files up to 100MB
+#   (warning above 50MB, hard limit at 100MB).
+# - For Git LFS: run `git lfs track "*.keras"` and commit `.gitattributes`.
+# - If you prefer to host weights via cloud storage / releases or Hugging Face,
+#   uncomment the line below:
+# *.keras
+# ==============================================================================

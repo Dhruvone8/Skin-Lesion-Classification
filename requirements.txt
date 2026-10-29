@@ -1,0 +1,9 @@
+# Skin Lesion Classification - Streamlit Application Dependencies
+# Compatible with Python 3.10 - 3.12 (standard TensorFlow) and Python 3.13 (TensorFlow 2.18+)
+# Tested for CPU inference on Windows, macOS, and Linux
+
+streamlit>=1.30.0
+tensorflow>=2.15.0
+numpy>=1.23.5
+pillow>=9.5.0
+plotly>=5.18.0
