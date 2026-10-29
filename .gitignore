@@ -50,5 +50,6 @@ htmlcov/
 # - For Git LFS: run `git lfs track "*.keras"` and commit `.gitattributes`.
 # - If you prefer to host weights via cloud storage / releases or Hugging Face,
 #   uncomment the line below:
-# *.keras
+# Only track the primary mild-sampling deployment weights
+best_efficientnetb0_stage3.keras
 # ==============================================================================
