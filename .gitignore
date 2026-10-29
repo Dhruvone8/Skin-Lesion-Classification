@@ -17,7 +17,7 @@ env.bak/
 venv.bak/
 
 # Streamlit runtime / local cache
-.streamlit/
+.streamlit/*
 !.streamlit/config.toml
 
 # IDE & Editor files

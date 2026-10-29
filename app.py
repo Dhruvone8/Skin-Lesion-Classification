@@ -1,14 +1,13 @@
 """
 Skin Lesion Classification - Research Inference Workbench
 =========================================================
-Clinical-grade research inference workstation for dermoscopic skin lesion classification
+Minimal, accessible research dashboard for dermoscopic skin lesion classification
 powered by an EfficientNetB0 convolutional neural network.
 
 Trained and evaluated on the HAM10000 dataset with mild class-balanced sampling.
-Designed as an academic machine learning portfolio artifact and clinical research workbench.
+Designed with a clean, high-contrast light theme for clinical research evaluation.
 """
 
-import io
 import os
 import sys
 from typing import Any, Dict, List, Optional, Tuple
@@ -20,17 +19,17 @@ import tensorflow as tf
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 # ==============================================================================
-# Page Configuration & Application Metadata
+# Page Configuration
 # ==============================================================================
 st.set_page_config(
-    page_title="Skin Lesion Classification | Research Inference Workbench",
+    page_title="Skin Lesion Classification | Research Workbench",
     page_icon="🔬",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # ==============================================================================
-# Class Definitions & Medical Knowledge Base (HAM10000)
+# Class Definitions & Medical Reference Data (HAM10000)
 # ==============================================================================
 CLASS_NAMES: List[str] = ["akiec", "bcc", "bkl", "df", "mel", "nv", "vasc"]
 
@@ -40,13 +39,10 @@ CLASS_METADATA: Dict[str, Dict[str, str]] = {
         "category": "Pre-cancerous",
         "severity": "warning",
         "description": (
-            "Sun-induced epidermal lesions with atypical keratinocytes (including Bowen's disease). "
-            "Precursor lesions with potential progression to invasive squamous cell carcinoma."
+            "Sun-induced epidermal lesion with cellular atypia. "
+            "Pre-malignant precursor that may progress to invasive squamous cell carcinoma."
         ),
-        "clinical_urgency": "Requires dermatological evaluation & management (cryotherapy, topical 5-FU, or excision)",
-        "badge_color": "#b45309",
-        "badge_bg": "#fef3c7",
-        "badge_border": "#fde68a",
+        "clinical_urgency": "Requires dermatological evaluation (cryotherapy, topical 5-FU, or excision)",
     },
     "bcc": {
         "full_name": "Basal Cell Carcinoma",
@@ -54,51 +50,39 @@ CLASS_METADATA: Dict[str, Dict[str, str]] = {
         "severity": "danger",
         "description": (
             "The most common cutaneous malignancy arising from basal layer cells. "
-            "Locally destructive with tissue invasion, but possesses very low metastatic potential."
+            "Locally tissue-invasive and destructive; rarely metastasizes."
         ),
-        "clinical_urgency": "Prompt clinical / surgical assessment indicated (Mohs micrographic surgery or excision)",
-        "badge_color": "#be123c",
-        "badge_bg": "#fff1f2",
-        "badge_border": "#fecdd3",
+        "clinical_urgency": "Prompt clinical/surgical excision indicated (Mohs micrographic surgery or excision)",
     },
     "bkl": {
         "full_name": "Benign Keratosis-like Lesions",
         "category": "Benign Epidermal Growth",
         "severity": "benign",
         "description": (
-            "Encompasses seborrheic keratoses, solar lentigines, and lichen-planus-like keratoses (LPLK). "
-            "Non-cancerous epithelial proliferations frequently mimicking melanocytic tumors."
+            "Includes seborrheic keratoses, solar lentigines, and lichen-planus-like keratoses (LPLK). "
+            "Common non-cancerous epidermal growths frequently mimicking melanocytic lesions."
         ),
-        "clinical_urgency": "Benign; routine clinical observation unless symptomatic or inflamed",
-        "badge_color": "#047857",
-        "badge_bg": "#ecfdf5",
-        "badge_border": "#a7f3d0",
+        "clinical_urgency": "Benign; periodic observation unless symptomatic or changing",
     },
     "df": {
         "full_name": "Dermatofibroma",
         "category": "Benign Dermal Lesion",
         "severity": "benign",
         "description": (
-            "Benign fibrohistiocytic dermal nodules, often occurring on lower extremities. "
-            "Typically exhibits a central white patch with peripheral delicate network (positive 'pinch sign')."
+            "Benign fibrohistiocytic dermal nodules, typically on extremities. "
+            "Often displays positive 'pinch sign' and central pale patch."
         ),
         "clinical_urgency": "Benign; reassurance provided; intervention rarely required",
-        "badge_color": "#047857",
-        "badge_bg": "#ecfdf5",
-        "badge_border": "#a7f3d0",
     },
     "mel": {
         "full_name": "Melanoma",
         "category": "Malignant Skin Cancer",
         "severity": "danger",
         "description": (
-            "High-grade cutaneous malignancy of melanocytic origin. "
-            "Significant risk of systemic metastasis if not detected and excised in early intraepidermal phase."
+            "The most lethal form of skin cancer, originating from melanocytes. "
+            "High propensity for early systemic metastasis if not promptly excised."
         ),
         "clinical_urgency": "URGENT: Expedited dermatological excision biopsy with histopathologic staging required",
-        "badge_color": "#be123c",
-        "badge_bg": "#fff1f2",
-        "badge_border": "#fecdd3",
     },
     "nv": {
         "full_name": "Melanocytic Nevi",
@@ -106,501 +90,346 @@ CLASS_METADATA: Dict[str, Dict[str, str]] = {
         "severity": "benign",
         "description": (
             "Common benign neoplasms composed of melanocytes (moles). Represents >67% "
-            "of public dermoscopy reference sets (HAM10000/ISIC)."
+            "of public reference datasets (HAM10000)."
         ),
-        "clinical_urgency": "Benign; baseline documentation and periodic ABCDE self-monitoring recommended",
-        "badge_color": "#047857",
-        "badge_bg": "#ecfdf5",
-        "badge_border": "#a7f3d0",
+        "clinical_urgency": "Common benign mole; periodic ABCDE self-monitoring recommended",
     },
     "vasc": {
         "full_name": "Vascular Lesions",
         "category": "Benign Vascular Proliferation",
         "severity": "benign",
         "description": (
-            "Benign cutaneous vascular proliferations including cherry angiomas, angiokeratomas, "
-            "and pyogenic granulomas. Characterized dermoscopically by red-to-purple lacunae."
+            "Benign cutaneous blood vessel proliferations including cherry angiomas, angiokeratomas, "
+            "and pyogenic granulomas. Characterized by vascular lacunae."
         ),
-        "clinical_urgency": "Benign vascular malformation; therapeutic intervention needed only if bleeding",
-        "badge_color": "#047857",
-        "badge_bg": "#ecfdf5",
-        "badge_border": "#a7f3d0",
+        "clinical_urgency": "Benign vascular malformation; intervention needed only if bleeding or irritated",
     },
 }
 
 DEFAULT_MODEL_FILENAME = "best_efficientnetb0_mild_sampling.keras"
 FALLBACK_MODEL_FILENAME = "best_efficientnetb0_stage3.keras"
 
-# Published research benchmark metrics on HAM10000 validation split
+# Research evaluation results on HAM10000 validation split
 BENCHMARK_METRICS = {
     "validation_accuracy": 0.7768,
     "macro_f1": 0.5431,
     "balanced_accuracy": 0.5078,
-    "architecture": "EfficientNetB0 (Fine-Tuned)",
     "sampling_strategy": "Mild Class-Balanced Sampling",
-    "dataset": "HAM10000 (ViDIR Group, MedUni Vienna)",
-    "input_resolution": "224 × 224 × 3 RGB",
 }
 
 
 # ==============================================================================
-# Clinical Workstation Theme & CSS Styling
+# Minimal Light Theme CSS
 # ==============================================================================
-def apply_workstation_styles():
+def apply_minimal_light_theme():
     """
-    Injects custom CSS to transform Streamlit into a clinical research workstation.
-    Employs a sophisticated light palette, precise alignment, restrained borders,
-    and clear typographic hierarchy.
+    Enforces a consistent, high-contrast light theme across Streamlit.
+    Removes dark backgrounds, overrides inherited white text,
+    and sets explicit accessible colors for all components.
     """
     st.markdown(
         """
         <style>
-        /* Base typography and layout reset */
-        html, body, [class*="css"] {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            color: #0f172a;
-            -webkit-font-smoothing: antialiased;
+        /* Force light theme colors on app container */
+        [data-testid="stAppViewContainer"], .main, .stApp {
+            background-color: #F5F7FA !important;
+            color: #17212F !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
         }
 
-        /* Adjust main container padding */
+        /* Sidebar light theme */
+        [data-testid="stSidebar"] {
+            background-color: #FFFFFF !important;
+            border-right: 1px solid #E2E8F0 !important;
+        }
+        [data-testid="stSidebar"] * {
+            color: #17212F !important;
+        }
+        [data-testid="stSidebar"] .stMarkdown p,
+        [data-testid="stSidebar"] .stMarkdown span,
+        [data-testid="stSidebar"] .stMarkdown td {
+            color: #526174 !important;
+        }
+        [data-testid="stSidebar"] .stMarkdown strong,
+        [data-testid="stSidebar"] .stMarkdown h1,
+        [data-testid="stSidebar"] .stMarkdown h2,
+        [data-testid="stSidebar"] .stMarkdown h3,
+        [data-testid="stSidebar"] .stMarkdown h4 {
+            color: #17212F !important;
+        }
+
+        /* Clean typography scale */
+        h1, h2, h3, h4, h5, h6,
+        .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4 {
+            color: #17212F !important;
+            font-weight: 700 !important;
+            letter-spacing: -0.015em !important;
+        }
+        p, span, label, div {
+            color: #17212F;
+        }
+
+        /* Streamlit main block container */
         .block-container {
-            padding-top: 1.25rem !important;
-            padding-bottom: 2.5rem !important;
-            max-width: 1320px !important;
+            padding-top: 1.5rem !important;
+            padding-bottom: 3rem !important;
+            max-width: 1200px !important;
         }
 
-        /* Top Application Header */
+        /* Minimal Header */
         .workbench-header {
+            margin-bottom: 1rem;
+            padding-bottom: 0.85rem;
+            border-bottom: 1px solid #E2E8F0;
+        }
+        .header-title {
+            font-size: 1.55rem !important;
+            font-weight: 750 !important;
+            color: #17212F !important;
+            margin: 0 !important;
+            line-height: 1.25 !important;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .header-subtitle {
+            font-size: 0.86rem !important;
+            color: #526174 !important;
+            margin-top: 3px !important;
+            margin-bottom: 0 !important;
+        }
+        .header-badge {
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #0F766E;
+            background-color: #F0FDFA;
+            border: 1px solid #CCFBF1;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        /* Compact Medical Disclaimer Banner */
+        .compact-disclaimer {
+            background-color: #FFFBEB !important;
+            border: 1px solid #FDE68A !important;
+            border-left: 4px solid #D97706 !important;
+            border-radius: 6px !important;
+            padding: 0.7rem 0.95rem !important;
+            margin-bottom: 1.25rem !important;
+            font-size: 0.82rem !important;
+            color: #92400E !important;
+            line-height: 1.45 !important;
+        }
+        .compact-disclaimer strong {
+            color: #78350F !important;
+        }
+
+        /* Section Title */
+        .section-heading {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #17212F;
+            margin-top: 0.5rem;
+            margin-bottom: 0.35rem;
+        }
+
+        /* Uploader styling */
+        [data-testid="stFileUploader"] {
+            margin-bottom: 0.35rem;
+        }
+        [data-testid="stFileUploader"] section {
+            background-color: #FFFFFF !important;
+            border: 1px dashed #CBD5E1 !important;
+            border-radius: 8px !important;
+        }
+
+        /* Image Metadata Pill */
+        .image-meta-bar {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            margin-top: 0.65rem;
+            margin-bottom: 0.85rem;
+            font-size: 0.78rem;
+            color: #526174;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 1.1rem 1.4rem;
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            margin-bottom: 1rem;
-            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
         }
 
-        .header-brand {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .header-mark {
-            width: 44px;
-            height: 44px;
-            background: #f0fdfa;
-            border: 1px solid #ccfbf1;
+        /* Prediction Result Highlight Box */
+        .prediction-box {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
             border-radius: 8px;
+            padding: 1.1rem 1.25rem;
+            margin-bottom: 1rem;
+        }
+        .pred-tag-row {
             display: flex;
             align-items: center;
-            justify-content: center;
-            color: #0f766e;
-            font-size: 1.35rem;
-            flex-shrink: 0;
+            justify-content: space-between;
+            margin-bottom: 0.4rem;
+        }
+        .pred-code-pill {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.76rem;
+            font-weight: 700;
+            padding: 2px 7px;
+            background: #17212F;
+            color: #FFFFFF !important;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+        .pred-category-pill {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid;
+        }
+        .cat-danger {
+            background-color: #FFF1F2;
+            color: #BE123C !important;
+            border-color: #FECDD3;
+        }
+        .cat-warning {
+            background-color: #FFFBEB;
+            color: #B45309 !important;
+            border-color: #FDE68A;
+        }
+        .cat-benign {
+            background-color: #ECFDF5;
+            color: #047857 !important;
+            border-color: #A7F3D0;
         }
 
-        .header-title {
-            font-size: 1.28rem;
-            font-weight: 750;
-            color: #0f172a;
-            margin: 0;
-            line-height: 1.2;
-            letter-spacing: -0.015em;
+        .pred-score-large {
+            font-size: 2.15rem;
+            font-weight: 800;
+            color: #0F766E;
+            line-height: 1.1;
+            margin: 0.35rem 0 0.2rem 0;
+            letter-spacing: -0.02em;
         }
-
-        .header-subtitle {
+        .pred-score-label {
             font-size: 0.82rem;
-            color: #64748b;
-            margin: 3px 0 0 0;
+            color: #64748B;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        .pred-title {
+            font-size: 1.2rem;
+            font-weight: 750;
+            color: #17212F;
+            margin-bottom: 0.35rem;
+        }
+        .pred-desc {
+            font-size: 0.83rem;
+            color: #526174;
+            line-height: 1.45;
+            margin-bottom: 0.65rem;
+        }
+        .pred-protocol-box {
+            background: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.78rem;
+            color: #334155;
             font-weight: 500;
         }
 
-        .header-meta-group {
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-            flex-wrap: wrap;
-        }
-
-        .header-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 10px;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            font-size: 0.74rem;
-            font-weight: 600;
-            color: #475569;
-        }
-
-        .header-pill-status {
-            background: #ecfdf5;
-            border-color: #a7f3d0;
-            color: #047857;
-        }
-
-        .status-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: #10b981;
-        }
-
-        /* Medical Safety Notice Banner */
-        .clinical-disclaimer-card {
-            background: #fffbeb;
-            border: 1px solid #fef3c7;
-            border-left: 4px solid #f59e0b;
-            border-radius: 8px;
-            padding: 0.85rem 1.15rem;
-            margin-bottom: 1.25rem;
-            font-size: 0.83rem;
-            color: #78350f;
-            line-height: 1.45;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
-        }
-
-        .disclaimer-head {
-            font-weight: 700;
-            color: #92400e;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-bottom: 3px;
-        }
-
-        /* Workflow Step Bar */
-        .workflow-bar {
+        /* Compact Metrics Row */
+        .metric-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 0.75rem;
-            margin-bottom: 1.25rem;
+            margin-top: 1rem;
+            margin-bottom: 0.75rem;
         }
-
-        .workflow-step {
-            display: flex;
-            align-items: center;
-            gap: 0.65rem;
-            padding: 0.65rem 0.9rem;
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 0.8rem;
-            color: #64748b;
-            font-weight: 500;
-        }
-
-        .workflow-step.active {
-            background: #f0fdfa;
-            border-color: #0f766e;
-            color: #0f766e;
-            font-weight: 650;
-        }
-
-        .step-badge {
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            background: #f1f5f9;
-            color: #475569;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.72rem;
-            font-weight: 700;
-            flex-shrink: 0;
-        }
-
-        .workflow-step.active .step-badge {
-            background: #0f766e;
-            color: #ffffff;
-        }
-
-        /* Panel Header Styling */
-        .panel-header-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding-bottom: 0.75rem;
-            border-bottom: 1px solid #f1f5f9;
-            margin-bottom: 1rem;
-        }
-
-        .panel-title {
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: #0f172a;
-            margin: 0;
-            letter-spacing: -0.01em;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .panel-badge {
-            font-size: 0.72rem;
-            padding: 2px 8px;
-            border-radius: 4px;
-            background: #f1f5f9;
-            color: #475569;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-        }
-
-        /* Dropzone enhancement */
-        .upload-instruction-card {
-            background: #f8fafc;
-            border: 1px dashed #cbd5e1;
-            border-radius: 8px;
-            padding: 1.15rem;
-            text-align: center;
-            color: #64748b;
-            font-size: 0.82rem;
-            margin-top: 0.5rem;
-            line-height: 1.5;
-        }
-
-        .image-spec-bar {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0.5rem;
-            margin-top: 0.75rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .spec-item {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
+        .metric-cell {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
             border-radius: 6px;
-            padding: 0.45rem 0.6rem;
-            text-align: center;
+            padding: 0.75rem 1rem;
         }
-
-        .spec-key {
-            font-size: 0.68rem;
-            color: #64748b;
+        .metric-cell-label {
+            font-size: 0.72rem;
+            color: #64748B;
             text-transform: uppercase;
             font-weight: 600;
-            letter-spacing: 0.03em;
-        }
-
-        .spec-val {
-            font-size: 0.82rem;
-            font-weight: 700;
-            color: #0f172a;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-            margin-top: 1px;
-        }
-
-        /* Top Diagnostic Prediction Banner */
-        .diagnostic-card {
-            border-radius: 8px;
-            padding: 1.15rem 1.35rem;
-            margin-bottom: 1rem;
-            border: 1px solid;
-            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
-        }
-
-        .diagnostic-card.danger {
-            background: #fff1f2;
-            border-color: #fecdd3;
-            color: #881337;
-        }
-
-        .diagnostic-card.warning {
-            background: #fffbeb;
-            border-color: #fde68a;
-            color: #78350f;
-        }
-
-        .diagnostic-card.benign {
-            background: #ecfdf5;
-            border-color: #a7f3d0;
-            color: #064e3b;
-        }
-
-        .diag-header-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 0.5rem;
-        }
-
-        .diag-tag-group {
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-        }
-
-        .code-tag {
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-            font-size: 0.78rem;
-            font-weight: 700;
-            padding: 3px 8px;
-            border-radius: 4px;
-            background: #0f172a;
-            color: #ffffff;
-            text-transform: uppercase;
-        }
-
-        .category-tag {
-            font-size: 0.76rem;
-            font-weight: 600;
-            padding: 3px 9px;
-            border-radius: 4px;
-            background: #ffffff;
-            border: 1px solid currentColor;
-            opacity: 0.9;
-        }
-
-        .rank-indicator {
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
             letter-spacing: 0.04em;
-            opacity: 0.85;
+            margin-bottom: 2px;
         }
-
-        .score-headline {
-            display: flex;
-            align-items: baseline;
-            gap: 0.5rem;
-            margin: 0.4rem 0 0.2rem 0;
-        }
-
-        .score-number {
-            font-size: 2.3rem;
-            font-weight: 850;
-            line-height: 1;
-            letter-spacing: -0.02em;
-        }
-
-        .score-label {
-            font-size: 0.85rem;
-            font-weight: 600;
-            opacity: 0.85;
-        }
-
-        .diag-title {
+        .metric-cell-value {
             font-size: 1.25rem;
             font-weight: 750;
-            margin: 0.35rem 0 0.4rem 0;
-            line-height: 1.25;
-        }
-
-        .diag-description {
-            font-size: 0.84rem;
-            line-height: 1.45;
-            opacity: 0.92;
-            margin-bottom: 0.6rem;
-        }
-
-        .diag-urgency-box {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.45rem;
-            font-size: 0.78rem;
-            padding: 0.45rem 0.65rem;
-            background: rgba(255, 255, 255, 0.65);
-            border-radius: 6px;
-            border: 1px solid rgba(0, 0, 0, 0.05);
-            font-weight: 600;
-        }
-
-        /* Sidebar Styling */
-        .sidebar-section-title {
-            font-size: 0.76rem;
-            font-weight: 700;
-            color: #64748b;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            margin-top: 1.1rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .metric-card-group {
-            display: flex;
-            flex-direction: column;
-            gap: 0.45rem;
-            margin-bottom: 0.85rem;
-        }
-
-        .metric-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0.6rem 0.75rem;
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-        }
-
-        .metric-name {
-            font-size: 0.77rem;
-            font-weight: 600;
-            color: #475569;
-        }
-
-        .metric-number {
-            font-size: 1.05rem;
-            font-weight: 750;
-            color: #0f172a;
+            color: #17212F;
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
         }
 
-        .sidebar-kv-table {
+        /* Sidebar Key-Value Table */
+        .sb-table {
             width: 100%;
-            font-size: 0.78rem;
+            font-size: 0.8rem;
             border-collapse: collapse;
             margin-bottom: 0.75rem;
         }
-
-        .sidebar-kv-table td {
+        .sb-table td {
             padding: 5px 0;
-            border-bottom: 1px solid #f1f5f9;
+            border-bottom: 1px solid #F1F5F9;
         }
-
-        .sidebar-kv-table td.key {
-            color: #64748b;
+        .sb-key {
+            color: #64748B !important;
             font-weight: 500;
-            width: 44%;
         }
-
-        .sidebar-kv-table td.val {
-            color: #0f172a;
+        .sb-val {
+            color: #17212F !important;
             font-weight: 600;
             text-align: right;
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
         }
 
         /* Technical Callout */
-        .tech-callout {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-left: 3px solid #64748b;
+        .technical-callout {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-left: 3px solid #64748B;
             border-radius: 6px;
-            padding: 0.65rem 0.9rem;
+            padding: 0.65rem 0.85rem;
             font-size: 0.78rem;
             color: #475569;
             line-height: 1.45;
-            margin-top: 0.75rem;
+            margin-top: 0.65rem;
+        }
+
+        /* Primary Button */
+        .stButton button[kind="primary"] {
+            background-color: #0F766E !important;
+            border-color: #0F766E !important;
+            color: #FFFFFF !important;
+            font-weight: 600 !important;
+            border-radius: 6px !important;
+        }
+        .stButton button[kind="primary"]:hover {
+            background-color: #115E59 !important;
+            border-color: #115E59 !important;
         }
 
         /* Footer */
         .workbench-footer {
             margin-top: 2.5rem;
-            padding-top: 1.25rem;
-            border-top: 1px solid #e2e8f0;
+            padding-top: 1rem;
+            border-top: 1px solid #E2E8F0;
             text-align: center;
             font-size: 0.76rem;
-            color: #64748b;
-            line-height: 1.6;
+            color: #64748B;
+            line-height: 1.5;
         }
         </style>
         """,
@@ -609,7 +438,7 @@ def apply_workstation_styles():
 
 
 # ==============================================================================
-# Model Discovery, Loading & Resource Caching
+# Model Loading & Caching
 # ==============================================================================
 def get_model_candidates() -> List[str]:
     """
@@ -636,7 +465,6 @@ def resolve_model_path() -> str:
     for path in candidates:
         if os.path.isfile(path):
             return os.path.abspath(path)
-
     current_dir = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(current_dir, DEFAULT_MODEL_FILENAME)
 
@@ -645,7 +473,7 @@ def resolve_model_path() -> str:
 def load_classification_model(model_filepath: str):
     """
     Loads and caches the trained Keras model without compiling.
-    Uses st.cache_resource to avoid redundant instantiations across reruns.
+    Uses st.cache_resource to prevent re-instantiating across reruns.
     """
     if not os.path.isfile(model_filepath):
         raise FileNotFoundError(f"Trained model file not found at: '{model_filepath}'")
@@ -654,7 +482,7 @@ def load_classification_model(model_filepath: str):
 
 
 # ==============================================================================
-# Image Preprocessing & Model Inference Pipeline
+# Image Preprocessing & Inference
 # ==============================================================================
 def preprocess_image(pil_img: Image.Image, target_size: Tuple[int, int] = (224, 224)) -> np.ndarray:
     """
@@ -664,9 +492,6 @@ def preprocess_image(pil_img: Image.Image, target_size: Tuple[int, int] = (224, 
     3. Resizes image to (224, 224) using bilinear interpolation.
     4. Converts image to float32 NumPy array with range [0.0, 255.0].
     5. Adds batch dimension -> shape (1, 224, 224, 3).
-
-    NOTE: Pixel values are in the range [0.0, 255.0] as Keras EfficientNetB0
-    incorporates internal input rescaling layers.
     """
     try:
         pil_img = ImageOps.exif_transpose(pil_img)
@@ -687,47 +512,35 @@ def preprocess_image(pil_img: Image.Image, target_size: Tuple[int, int] = (224, 
 
 def run_inference(model, input_batch: np.ndarray) -> np.ndarray:
     """
-    Executes model forward pass and validates probability vector output.
-    Returns 1D array of 7 class softmax probabilities.
+    Executes model forward pass and returns 1D array of 7 class softmax probabilities.
     """
     raw_output = model.predict(input_batch, verbose=0)
-
     if raw_output.ndim != 2 or raw_output.shape[1] != len(CLASS_NAMES):
-        raise ValueError(
-            f"Invalid model output shape {raw_output.shape}. "
-            f"Expected shape (1, {len(CLASS_NAMES)})."
-        )
-
-    probabilities = raw_output[0]
-    return probabilities
+        raise ValueError(f"Invalid model output shape {raw_output.shape}. Expected (1, {len(CLASS_NAMES)}).")
+    return raw_output[0]
 
 
-def generate_benchmark_pattern(lesion_type: str = "melanocytic") -> Image.Image:
+def generate_benchmark_sample() -> Image.Image:
     """
-    Generates a deterministic synthetic dermoscopy benchmark pattern
-    featuring characteristic peripheral vignetting and pigment network.
+    Generates a deterministic synthetic dermoscopy reference pattern.
     Permits instant testing when an evaluator does not have a local image file.
     """
-    np.random.seed(101 if lesion_type == "melanocytic" else 202)
+    np.random.seed(42)
     h, w = 360, 360
     y, x = np.ogrid[:h, :w]
     cy, cx = h / 2.0, w / 2.0
     dist = np.sqrt((x - cx) ** 2 + (y - cy) ** 2)
 
-    # Base background skin tone (erythematous / Caucasian dermoscopic skin)
+    # Base skin tone
     base = np.zeros((h, w, 3), dtype=np.float32)
-    base[:, :] = [218.0, 182.0, 158.0]
+    base[:, :] = [218.0, 180.0, 155.0]
 
-    # Circular dermatoscope aperture vignette
-    aperture_radius = w * 0.46
-    vignette = np.clip(1.0 - (dist / aperture_radius) ** 4, 0.0, 1.0)
+    # Dermatoscope aperture vignette
+    vignette = np.clip(1.0 - (dist / (w * 0.46)) ** 4, 0.0, 1.0)
 
-    # Central lesion pigment core
-    core_radius = 80.0 if lesion_type == "melanocytic" else 70.0
-    lesion_mask = np.clip(1.0 - (dist / core_radius) ** 2, 0.0, 1.0)
-
-    # Pigment coloration
-    pigment = np.array([85.0, 48.0, 36.0], dtype=np.float32)
+    # Pigmented lesion core
+    lesion_mask = np.clip(1.0 - (dist / 75.0) ** 2, 0.0, 1.0)
+    pigment = np.array([88.0, 48.0, 35.0], dtype=np.float32)
 
     for c in range(3):
         base[:, :, c] = base[:, :, c] * (1.0 - lesion_mask * 0.72) + pigment[c] * (lesion_mask * 0.72)
@@ -738,32 +551,30 @@ def generate_benchmark_pattern(lesion_type: str = "melanocytic") -> Image.Image:
 
 
 # ==============================================================================
-# Visualization: Clinical-Grade Horizontal Bar Chart
+# Visualization: Clean Horizontal Bar Chart
 # ==============================================================================
 def create_probability_chart(sorted_results: List[Dict[str, Any]]) -> go.Figure:
     """
-    Renders an elegant horizontal bar chart ranking all 7 classes.
-    Uses clinical palette styling (teal/medical blue for top, slate for others).
+    Renders a compact, high-contrast horizontal bar chart ranking all 7 classes.
     """
     display_results = list(reversed(sorted_results))
 
     labels = [
-        f"<b>{item['full_name']}</b> <span style='color:#64748b;'>({item['code'].upper()})</span>"
+        f"{item['full_name']} ({item['code'].upper()})"
         for item in display_results
     ]
     scores = [item["percentage"] for item in display_results]
 
     hover_texts = [
         f"<b>{item['full_name']}</b><br>"
-        f"Class Token: <code>{item['code']}</code><br>"
-        f"Pathology: {item['category']}<br>"
-        f"Softmax Output: <b>{item['percentage']:.2f}%</b>"
+        f"Class: <code>{item['code']}</code> ({item['category']})<br>"
+        f"Softmax Probability: <b>{item['percentage']:.2f}%</b>"
         for item in display_results
     ]
 
-    # Clinical color mapping: Top ranked class highlighted in clinical teal/blue, others in muted slate
+    # #0F766E for top prediction, #CBD5E1 for others
     bar_colors = [
-        "#0f766e" if item["rank"] == 1 else "#cbd5e1"
+        "#0F766E" if item["rank"] == 1 else "#CBD5E1"
         for item in display_results
     ]
 
@@ -774,10 +585,10 @@ def create_probability_chart(sorted_results: List[Dict[str, Any]]) -> go.Figure:
             orientation="h",
             text=[f" {s:.1f}%" for s in scores],
             textposition="outside",
-            textfont=dict(size=11, color="#0f172a", family="ui-monospace, monospace"),
+            textfont=dict(size=11, color="#17212F", family="monospace"),
             marker=dict(
                 color=bar_colors,
-                line=dict(color="#94a3b8", width=0.5),
+                line=dict(color="#94A3B8", width=0.5),
             ),
             hoverinfo="text",
             hovertext=hover_texts,
@@ -789,23 +600,23 @@ def create_probability_chart(sorted_results: List[Dict[str, Any]]) -> go.Figure:
     x_limit = min(100.0, max(max_score * 1.18, 20.0))
 
     fig.update_layout(
-        margin=dict(l=10, r=45, t=10, b=25),
-        height=260,
+        margin=dict(l=10, r=40, t=10, b=25),
+        height=250,
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         xaxis=dict(
-            title=dict(text="Model Softmax Output Score (%)", font=dict(size=11, color="#64748b")),
+            title=dict(text="Model Softmax Probability (%)", font=dict(size=11, color="#526174")),
             range=[0, x_limit],
             showgrid=True,
-            gridcolor="#f1f5f9",
+            gridcolor="#E2E8F0",
             zeroline=False,
             ticksuffix="%",
-            tickfont=dict(size=10, color="#64748b"),
+            tickfont=dict(size=10, color="#526174"),
         ),
         yaxis=dict(
             showgrid=False,
             autorange=True,
-            tickfont=dict(size=11, color="#0f172a"),
+            tickfont=dict(size=11, color="#17212F"),
         ),
         font=dict(family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto", size=11),
     )
@@ -814,151 +625,80 @@ def create_probability_chart(sorted_results: List[Dict[str, Any]]) -> go.Figure:
 
 
 # ==============================================================================
-# Main Application Entry Point
+# Main Application
 # ==============================================================================
 def main():
-    apply_workstation_styles()
+    apply_minimal_light_theme()
 
     resolved_path = resolve_model_path()
     model_basename = os.path.basename(resolved_path)
     model_exists = os.path.isfile(resolved_path)
 
     # --------------------------------------------------------------------------
-    # 1. Compact Clinical Application Header
-    # --------------------------------------------------------------------------
-    st.markdown(
-        f"""
-        <div class="workbench-header">
-            <div class="header-brand">
-                <div class="header-mark">🔬</div>
-                <div class="header-title-wrap">
-                    <h1 class="header-title">Skin Lesion Classification</h1>
-                    <p class="header-subtitle">Research Inference Workbench · HAM10000 Benchmark Evaluation</p>
-                </div>
-            </div>
-            <div class="header-meta-group">
-                <span class="header-pill">Backbone: EfficientNetB0</span>
-                <span class="header-pill">Strategy: Mild Sampling</span>
-                <span class="header-pill {'header-pill-status' if model_exists else ''}">
-                    <span class="status-dot"></span>
-                    {'System Ready' if model_exists else 'Model Missing'}
-                </span>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # --------------------------------------------------------------------------
-    # 2. Compact Medical Safety Notice
-    # --------------------------------------------------------------------------
-    st.markdown(
-        """
-        <div class="clinical-disclaimer-card">
-            <div class="disclaimer-head">
-                <span>⚠️</span> Medical Research Demonstration — Strictly Not for Clinical Diagnostic Use
-            </div>
-            <div>
-                This system is an academic machine learning prototype trained on the HAM10000 reference archive.
-                Predictions represent uncalibrated algorithmic softmax outputs and must <strong>never</strong> be used for medical diagnosis,
-                treatment, or clinical decision-making. Standard dermoscopic images are required; consumer camera photos will yield unreliable results.
-                If you have concerns about a changing skin spot, consult a board-certified dermatologist.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # --------------------------------------------------------------------------
-    # 3. Sidebar: Research Architecture, Metrics, and Target Classes
+    # 1. Sidebar: Concise Specifications & Reference
     # --------------------------------------------------------------------------
     with st.sidebar:
         st.markdown(
             """
-            <div style="display:flex; align-items:center; gap:8px; padding-bottom:8px; border-bottom:1px solid #e2e8f0; margin-bottom:12px;">
-                <span style="font-size:1.15rem;">🔬</span>
-                <div>
-                    <div style="font-weight:700; font-size:0.92rem; color:#0f172a;">Research Specification</div>
-                    <div style="font-size:0.73rem; color:#64748b;">HAM10000 Multiclass Benchmark</div>
-                </div>
+            <div style="font-weight:700; font-size:0.95rem; color:#17212F; padding-bottom:6px; border-bottom:1px solid #E2E8F0; margin-bottom:12px;">
+                Model Specification
             </div>
             """,
             unsafe_allow_html=True,
         )
-
-        st.markdown('<div class="sidebar-section-title">Validation Performance</div>', unsafe_allow_html=True)
-        st.caption("Benchmark results on the HAM10000 validation split:")
 
         st.markdown(
             f"""
-            <div class="metric-card-group">
-                <div class="metric-row">
-                    <span class="metric-name" title="Overall multi-class accuracy across all validation samples">Validation Accuracy</span>
-                    <span class="metric-number">{BENCHMARK_METRICS['validation_accuracy'] * 100:.2f}%</span>
-                </div>
-                <div class="metric-row">
-                    <span class="metric-name" title="Unweighted mean of F1 scores across all 7 lesion classes">Macro F1 Score</span>
-                    <span class="metric-number">{BENCHMARK_METRICS['macro_f1']:.4f}</span>
-                </div>
-                <div class="metric-row">
-                    <span class="metric-name" title="Mean recall across all 7 classes, correcting for extreme class imbalance">Balanced Accuracy</span>
-                    <span class="metric-number">{BENCHMARK_METRICS['balanced_accuracy'] * 100:.2f}%</span>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        st.markdown(
-            """
-            <div style="font-size:0.73rem; color:#64748b; line-height:1.4; margin-bottom:12px;">
-                <em>Note:</em> In skin lesion datasets where benign nevi comprise ~67% of cases,
-                <strong>Balanced Accuracy</strong> and <strong>Macro F1</strong> provide true diagnostic sensitivity across minority classes (Melanoma & BCC).
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        st.markdown('<div class="sidebar-section-title">Model Specifications</div>', unsafe_allow_html=True)
-        st.markdown(
-            f"""
-            <table class="sidebar-kv-table">
-                <tr><td class="key">Architecture</td><td class="val">EfficientNetB0</td></tr>
-                <tr><td class="key">Input Tensor</td><td class="val">224 × 224 × 3</td></tr>
-                <tr><td class="key">Color Space</td><td class="val">RGB [0, 255]</td></tr>
-                <tr><td class="key">Output Units</td><td class="val">7 Softmax</td></tr>
-                <tr><td class="key">Sampling</td><td class="val">Mild Balance</td></tr>
-                <tr><td class="key">Backbone</td><td class="val">ImageNet Pretrained</td></tr>
+            <table class="sb-table">
+                <tr><td class="sb-key">Backbone</td><td class="sb-val">EfficientNetB0</td></tr>
+                <tr><td class="sb-key">Input Size</td><td class="sb-val">224 × 224 × 3</td></tr>
+                <tr><td class="sb-key">Color Space</td><td class="sb-val">RGB [0, 255]</td></tr>
+                <tr><td class="sb-key">Outputs</td><td class="sb-val">7 Softmax</td></tr>
+                <tr><td class="sb-key">Sampling</td><td class="sb-val">Mild Balance</td></tr>
+                <tr><td class="sb-key">Weights</td><td class="sb-val">ImageNet Pretrained</td></tr>
             </table>
             """,
             unsafe_allow_html=True,
         )
 
-        st.markdown('<div class="sidebar-section-title">Target Class Reference (7)</div>', unsafe_allow_html=True)
-        with st.expander("Explore 7 Diagnostic Classes", expanded=False):
+        st.markdown(
+            """
+            <div style="font-weight:700; font-size:0.85rem; color:#17212F; margin-top:16px; margin-bottom:6px;">
+                Target Lesion Classes (7)
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        with st.expander("Explore 7 Target Classes", expanded=False):
             for code in CLASS_NAMES:
                 meta = CLASS_METADATA[code]
                 st.markdown(
                     f"""
-                    <div style="padding:6px 0; border-bottom:1px solid #f1f5f9; font-size:0.77rem;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
-                            <strong style="color:#0f172a;">{meta['full_name']}</strong>
-                            <code style="font-size:0.7rem; font-weight:700;">{code.upper()}</code>
-                        </div>
-                        <span style="font-size:0.7rem; color:{meta['badge_color']}; font-weight:600;">{meta['category']}</span>
-                        <div style="color:#475569; font-size:0.72rem; margin-top:2px;">{meta['description']}</div>
+                    <div style="padding:5px 0; border-bottom:1px solid #F1F5F9; font-size:0.77rem;">
+                        <strong style="color:#17212F;">{meta['full_name']}</strong> 
+                        <code style="font-size:0.7rem; font-weight:700; color:#0F766E;">{code.upper()}</code><br>
+                        <span style="font-size:0.71rem; color:#526174;">{meta['category']}</span>
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
 
-        st.markdown('<div class="sidebar-section-title">Runtime Environment</div>', unsafe_allow_html=True)
+        st.markdown(
+            """
+            <div style="font-weight:700; font-size:0.85rem; color:#17212F; margin-top:16px; margin-bottom:6px;">
+                System Status
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
         if model_exists:
             st.markdown(
                 f"""
-                <div style="font-size:0.74rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:8px;">
-                    <div style="color:#047857; font-weight:600; margin-bottom:2px;">● Model Weights Loaded</div>
-                    <code style="font-size:0.7rem; word-break:break-all;">{model_basename}</code>
+                <div style="font-size:0.74rem; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:6px; padding:8px;">
+                    <div style="color:#047857; font-weight:600; margin-bottom:2px;">● Weights Ready</div>
+                    <code style="font-size:0.68rem; color:#17212F; word-break:break-all;">{model_basename}</code>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -966,34 +706,58 @@ def main():
         else:
             st.markdown(
                 f"""
-                <div style="font-size:0.74rem; background:#fff1f2; border:1px solid #fecdd3; border-radius:6px; padding:8px;">
-                    <div style="color:#be123c; font-weight:600; margin-bottom:2px;">✕ Weights Not Found</div>
-                    <code style="font-size:0.7rem; word-break:break-all;">{DEFAULT_MODEL_FILENAME}</code>
+                <div style="font-size:0.74rem; background:#FFF1F2; border:1px solid #FECDD3; border-radius:6px; padding:8px;">
+                    <div style="color:#BE123C; font-weight:600; margin-bottom:2px;">✕ Weights Not Found</div>
+                    <code style="font-size:0.68rem; color:#17212F; word-break:break-all;">{DEFAULT_MODEL_FILENAME}</code>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
 
     # --------------------------------------------------------------------------
-    # 4. Model Loading with Error Guard
+    # 2. Main Area: Clean Header (No Large Card)
+    # --------------------------------------------------------------------------
+    st.markdown(
+        """
+        <div class="workbench-header">
+            <h1 class="header-title">
+                <span>🔬</span> Skin Lesion Classification
+                <span class="header-badge">Research Workbench</span>
+            </h1>
+            <p class="header-subtitle">Research Inference Platform · HAM10000 Benchmark Evaluation</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # --------------------------------------------------------------------------
+    # 3. Compact Safety Disclaimer Notice
+    # --------------------------------------------------------------------------
+    st.markdown(
+        """
+        <div class="compact-disclaimer">
+            <strong>⚠️ Educational & Research Demonstration Only:</strong>
+            This system is an academic machine learning prototype and is <strong>not</strong> certified for medical diagnosis or clinical treatment.
+            Predictions represent uncalibrated algorithmic softmax outputs. Standard dermoscopic images are required; consumer camera photos yield unreliable outputs.
+            Consult a board-certified dermatologist for medical evaluation.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # --------------------------------------------------------------------------
+    # 4. Model Loading Guard
     # --------------------------------------------------------------------------
     if not model_exists:
         st.error(
-            f"### ⚠️ Model Artifact Unavailable\n\n"
-            f"The application could not locate the primary model file: **`{DEFAULT_MODEL_FILENAME}`**.\n\n"
-            f"**Expected Location:** `{resolved_path}`\n\n"
-            f"Please verify that the `.keras` model file exists or configure the `MODEL_PATH` environment variable."
+            f"**Model Artifact Unavailable:** Could not locate `{DEFAULT_MODEL_FILENAME}` at `{resolved_path}`."
         )
         st.stop()
 
     try:
         model = load_classification_model(resolved_path)
     except Exception as exc:
-        st.error(
-            f"### ⚠️ Model Initialization Failure\n\n"
-            f"An error occurred while deserializing the Keras model.\n\n"
-            f"**Details:** `{str(exc)}`"
-        )
+        st.error(f"**Model Initialization Error:** `{str(exc)}`")
         st.stop()
 
     # --------------------------------------------------------------------------
@@ -1009,31 +773,20 @@ def main():
         st.session_state.prediction_results = None
 
     # --------------------------------------------------------------------------
-    # 6. Main Workspace Layout & Uploader
+    # 6. Upload Section
     # --------------------------------------------------------------------------
-    col_uploader, col_helper = st.columns([1.6, 1], gap="medium")
+    st.markdown('<div class="section-heading">Analyze a Dermoscopic Image</div>', unsafe_allow_html=True)
 
-    with col_uploader:
-        uploaded_file = st.file_uploader(
-            "Upload Dermoscopic Lesion Image",
-            type=["jpg", "jpeg", "png"],
-            help="Supported formats: Standard JPG, JPEG, PNG dermoscopy images. Input is converted to RGB and resized to 224x224.",
-            label_visibility="visible",
-        )
+    uploaded_file = st.file_uploader(
+        "Choose a dermoscopic image",
+        type=["jpg", "jpeg", "png"],
+        help="Supported formats: JPG, JPEG, PNG. Image will be converted to RGB and resized to 224x224.",
+        label_visibility="collapsed",
+    )
 
-    with col_helper:
-        st.markdown(
-            """
-            <div class="upload-instruction-card">
-                <strong>Standardized Dermoscopic Input Expected</strong><br>
-                For valid research inference, input must be a magnified dermoscopy image (contact or cross-polarized).
-                Macro photographs or smartphone camera images are out-of-distribution.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    st.caption("Accepted formats: JPG, JPEG, PNG. Standardized dermoscopic magnification expected.")
 
-    # Handle file upload or sample selection
+    # Synchronize uploaded file to session state
     if uploaded_file is not None:
         file_id = f"{uploaded_file.name}_{uploaded_file.size}"
         if st.session_state.current_file_id != file_id:
@@ -1045,141 +798,58 @@ def main():
                 st.session_state.active_pil_image = pil_temp
                 st.session_state.active_image_name = uploaded_file.name
             except (UnidentifiedImageError, OSError, ValueError):
-                st.error("❌ Invalid image format. Please upload an uncorrupted JPG or PNG file.")
+                st.error("❌ Invalid image file. Please upload an uncorrupted JPG or PNG image.")
                 st.session_state.active_pil_image = None
     elif st.session_state.active_pil_image is None:
-        # Prompt evaluator with sample test option
-        sub_col1, sub_col2 = st.columns([1, 1])
-        with sub_col1:
-            if st.button("🧪 Load Benchmark Test Sample (Melanocytic)", use_container_width=True):
-                sample_img = generate_benchmark_pattern("melanocytic")
-                st.session_state.current_file_id = "synthetic_melanocytic_sample"
-                st.session_state.active_pil_image = sample_img
-                st.session_state.active_image_name = "benchmark_melanocytic_sample.png"
-                st.session_state.prediction_results = None
-                st.rerun()
-
-    # Determine workflow progress steps
-    has_active_image = st.session_state.active_pil_image is not None
-    has_active_preds = st.session_state.prediction_results is not None
-
-    step1_class = "active" if has_active_image else ""
-    step2_class = "active" if has_active_image else ""
-    step3_class = "active" if has_active_preds else ""
-
-    # Workflow stepper banner
-    st.markdown(
-        f"""
-        <div class="workflow-bar">
-            <div class="workflow-step {'active' if not has_active_image or step1_class else ''}">
-                <div class="step-badge">1</div>
-                <div>Dermoscopic Image Input</div>
-            </div>
-            <div class="workflow-step {step2_class}">
-                <div class="step-badge">2</div>
-                <div>Preprocessing & Inference</div>
-            </div>
-            <div class="workflow-step {step3_class}">
-                <div class="step-badge">3</div>
-                <div>Pathology Score Distribution</div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        # Provide compact benchmark sample option when no image is loaded
+        if st.button("🧪 Load Benchmark Test Sample", use_container_width=False):
+            st.session_state.current_file_id = "sample_benchmark_pattern"
+            st.session_state.active_pil_image = generate_benchmark_sample()
+            st.session_state.active_image_name = "benchmark_dermoscopy_sample.png"
+            st.session_state.prediction_results = None
+            st.rerun()
 
     # --------------------------------------------------------------------------
-    # 7. Core Workstation Workspace (Inspection & Inference)
+    # 7. Workspace: Preview & Prediction Results
     # --------------------------------------------------------------------------
-    if not has_active_image:
-        st.markdown(
-            """
-            <div style="background:#ffffff; border:1px dashed #cbd5e1; border-radius:10px; padding:3.5rem 1.5rem; text-align:center; color:#64748b; margin-top:0.5rem;">
-                <div style="font-size:2.4rem; color:#0f766e; margin-bottom:0.75rem;">🔬</div>
-                <div style="font-weight:700; font-size:1.05rem; color:#0f172a; margin-bottom:0.35rem;">Awaiting Dermoscopic Image</div>
-                <div style="font-size:0.85rem; max-width:540px; margin:0 auto; line-height:1.5;">
-                    Please select or drop a dermoscopic image above (<code>.jpg</code>, <code>.png</code>) or click <strong>'Load Benchmark Test Sample'</strong> to evaluate the pipeline.
-                    The system will frame the lesion, apply bilinear 224×224 RGB scaling, and evaluate multiclass probabilities across all 7 HAM10000 categories.
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    else:
+    if st.session_state.active_pil_image is not None:
         pil_image = st.session_state.active_pil_image
         image_name = st.session_state.active_image_name or "dermoscopic_input.jpg"
 
-        # 2-Column Workstation Layout
-        col_inspect, col_results = st.columns([1, 1.25], gap="large")
+        col_img, col_pred = st.columns([1, 1.3], gap="large")
 
-        # Left Column: Image Inspection & Execution
-        with col_inspect:
-            st.markdown(
-                """
-                <div class="panel-header-row">
-                    <h3 class="panel-title"><span>🔍</span> Dermoscopic Viewport</h3>
-                    <span class="panel-badge">Inspection Panel</span>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+        # Left Column: Image Preview & Control
+        with col_img:
+            st.markdown('<div class="section-heading" style="font-size:0.95rem;">Image Preview</div>', unsafe_allow_html=True)
+            st.image(pil_image, use_container_width=True)
 
-            # Framed image preview preserving aspect ratio
-            st.image(
-                pil_image,
-                use_container_width=True,
-            )
-
-            # Metadata specification bar
             st.markdown(
                 f"""
-                <div class="image-spec-bar">
-                    <div class="spec-item">
-                        <div class="spec-key">File Name</div>
-                        <div class="spec-val" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{image_name}">{image_name}</div>
-                    </div>
-                    <div class="spec-item">
-                        <div class="spec-key">Resolution</div>
-                        <div class="spec-val">{pil_image.width} × {pil_image.height} px</div>
-                    </div>
-                    <div class="spec-item">
-                        <div class="spec-key">Channels</div>
-                        <div class="spec-val">{pil_image.mode} → RGB</div>
-                    </div>
+                <div class="image-meta-bar">
+                    <span style="font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:60%;" title="{image_name}">{image_name}</span>
+                    <span>{pil_image.width} × {pil_image.height} px · RGB</span>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
 
-            btn_col1, btn_col2 = st.columns([1.8, 1])
+            btn_col1, btn_col2 = st.columns([1.5, 1])
             with btn_col1:
-                run_btn = st.button(
-                    "▶ Run Model Inference",
-                    type="primary",
-                    use_container_width=True,
-                )
+                run_btn = st.button("▶ Run Inference", type="primary", use_container_width=True)
             with btn_col2:
-                if st.button("↺ Reset View", use_container_width=True):
+                if st.button("↺ Reset", use_container_width=True):
                     st.session_state.current_file_id = None
                     st.session_state.active_pil_image = None
                     st.session_state.active_image_name = None
                     st.session_state.prediction_results = None
                     st.rerun()
 
-        # Right Column: Inference Execution & Pathology Analysis
-        with col_results:
-            st.markdown(
-                """
-                <div class="panel-header-row">
-                    <h3 class="panel-title"><span>📊</span> Clinical Inference & Pathology Analysis</h3>
-                    <span class="panel-badge">7-Class Softmax</span>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+        # Right Column: Predictions & Distribution
+        with col_pred:
+            st.markdown('<div class="section-heading" style="font-size:0.95rem;">Prediction Results</div>', unsafe_allow_html=True)
 
             if run_btn:
-                with st.spinner("Executing forward pass through EfficientNetB0..."):
+                with st.spinner("Executing forward pass..."):
                     try:
                         processed_batch = preprocess_image(pil_image, target_size=(224, 224))
                         probabilities = run_inference(model, processed_batch)
@@ -1207,22 +877,15 @@ def main():
 
                         st.session_state.prediction_results = results
                     except Exception as err:
-                        st.error(
-                            f"❌ **Inference Failure**: An error occurred during the forward pass.\n\n"
-                            f"Details: `{str(err)}`"
-                        )
+                        st.error(f"Inference error: `{str(err)}`")
                         return
 
-            # Display results if available
             if st.session_state.prediction_results is None:
                 st.markdown(
                     """
-                    <div style="background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px; padding:3.2rem 1.5rem; text-align:center; color:#64748b;">
-                        <div style="font-size:1.8rem; margin-bottom:0.5rem;">⚡</div>
-                        <div style="font-weight:700; color:#0f172a; margin-bottom:0.3rem;">Inference Pipeline Ready</div>
-                        <div style="font-size:0.82rem; line-height:1.5;">
-                            Click <strong>'▶ Run Model Inference'</strong> to compute class probabilities across the 7 diagnostic categories.
-                        </div>
+                    <div style="background:#FFFFFF; border:1px dashed #CBD5E1; border-radius:8px; padding:2.5rem 1.5rem; text-align:center; color:#526174; margin-top:0.25rem;">
+                        <div style="font-weight:600; color:#17212F; margin-bottom:4px;">Awaiting Execution</div>
+                        <div style="font-size:0.82rem;">Click <strong>'▶ Run Inference'</strong> to compute class probabilities.</div>
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -1231,27 +894,24 @@ def main():
                 results = st.session_state.prediction_results
                 top_class = results[0]
 
-                # Top Diagnostic Prediction Card
-                severity_class = top_class["severity"]  # danger, warning, benign
+                # Severity tag class
+                sev = top_class["severity"]
+                cat_class = "cat-danger" if sev == "danger" else ("cat-warning" if sev == "warning" else "cat-benign")
+
+                # Clean Top Prediction Card
                 st.markdown(
                     f"""
-                    <div class="diagnostic-card {severity_class}">
-                        <div class="diag-header-row">
-                            <div class="diag-tag-group">
-                                <span class="code-tag">{top_class['code']}</span>
-                                <span class="category-tag">{top_class['category']}</span>
-                            </div>
-                            <span class="rank-indicator">Highest Predicted Probability</span>
+                    <div class="prediction-box">
+                        <div class="pred-tag-row">
+                            <span class="pred-code-pill">{top_class['code']}</span>
+                            <span class="pred-category-pill {cat_class}">{top_class['category']}</span>
                         </div>
-                        <div class="score-headline">
-                            <span class="score-number">{top_class['percentage']:.2f}%</span>
-                            <span class="score-label">Softmax Probability Score</span>
-                        </div>
-                        <div class="diag-title">{top_class['full_name']}</div>
-                        <div class="diag-description">{top_class['description']}</div>
-                        <div class="diag-urgency-box">
-                            <span>📋</span>
-                            <span><strong>Clinical Protocol Reference:</strong> {top_class['clinical_urgency']}</span>
+                        <div class="pred-score-large">{top_class['percentage']:.2f}%</div>
+                        <div class="pred-score-label">Softmax Probability (Uncalibrated Model Output)</div>
+                        <div class="pred-title">{top_class['full_name']}</div>
+                        <div class="pred-desc">{top_class['description']}</div>
+                        <div class="pred-protocol-box">
+                            <strong>Reference Note:</strong> {top_class['clinical_urgency']}
                         </div>
                     </div>
                     """,
@@ -1261,9 +921,8 @@ def main():
                 # Distribution Chart
                 st.markdown(
                     """
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                        <strong style="font-size:0.85rem; color:#0f172a;">Pathology Probability Distribution (All 7 Classes)</strong>
-                        <span style="font-size:0.73rem; color:#64748b;">Desc. Order</span>
+                    <div style="font-weight:600; font-size:0.84rem; color:#17212F; margin-bottom:2px;">
+                        Seven-Class Probability Distribution
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -1271,43 +930,33 @@ def main():
                 chart = create_probability_chart(results)
                 st.plotly_chart(chart, use_container_width=True, config={"displayModeBar": False})
 
-                # Technical interpretation note
+                # Technical note
                 st.markdown(
                     """
-                    <div class="tech-callout">
-                        <strong>Probabilistic Interpretation:</strong> Softmax scores represent relative feature alignment within the closed 7-class training distribution. 
-                        They are <strong>not calibrated Bayesian posterior probabilities</strong> of disease. A non-zero probability for high-risk classes (e.g. Melanoma) warrants clinical attention regardless of top rank.
+                    <div class="technical-callout">
+                        <strong>Probabilistic Interpretation:</strong> Softmax scores represent relative feature correlation within the closed 7-class training distribution. They are <strong>not calibrated medical probabilities</strong>.
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
 
         # ----------------------------------------------------------------------
-        # 8. Full Ranked Pathology Data Grid (All 7 Classes)
+        # 8. Full Ranked Table Breakdown
         # ----------------------------------------------------------------------
         if st.session_state.prediction_results is not None:
-            st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
-            st.markdown(
-                """
-                <div class="panel-header-row" style="margin-top:1rem;">
-                    <h3 class="panel-title"><span>📋</span> Complete Diagnostic Class Breakdown</h3>
-                    <span class="panel-badge">7-Class Full Evaluation</span>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+            st.markdown('<div class="section-heading" style="font-size:0.95rem;">Full Seven-Class Ranking</div>', unsafe_allow_html=True)
 
-            # Build data grid
             table_data = []
             for item in st.session_state.prediction_results:
                 table_data.append(
                     {
                         "Rank": f"#{item['rank']}",
                         "Code": item["code"].upper(),
-                        "Diagnostic Entity": item["full_name"],
-                        "Pathology Type": item["category"],
-                        "Model Score": round(item["percentage"], 2),
-                        "Clinical Protocol Context": item["clinical_urgency"],
+                        "Entity": item["full_name"],
+                        "Category": item["category"],
+                        "Score": round(item["percentage"], 2),
+                        "Reference Context": item["clinical_urgency"],
                     }
                 )
 
@@ -1316,65 +965,87 @@ def main():
                 column_config={
                     "Rank": st.column_config.TextColumn("Rank", width="small"),
                     "Code": st.column_config.TextColumn("Code", width="small"),
-                    "Diagnostic Entity": st.column_config.TextColumn("Diagnostic Entity", width="medium"),
-                    "Pathology Type": st.column_config.TextColumn("Pathology Type", width="medium"),
-                    "Model Score": st.column_config.ProgressColumn(
+                    "Entity": st.column_config.TextColumn("Pathology Entity", width="medium"),
+                    "Category": st.column_config.TextColumn("Category", width="small"),
+                    "Score": st.column_config.ProgressColumn(
                         "Model Score (%)",
-                        help="Relative softmax probability output",
                         format="%.2f%%",
                         min_value=0.0,
                         max_value=100.0,
                         width="medium",
                     ),
-                    "Clinical Protocol Context": st.column_config.TextColumn("Clinical Reference Protocol", width="large"),
+                    "Reference Context": st.column_config.TextColumn("Clinical Protocol", width="large"),
                 },
                 hide_index=True,
                 use_container_width=True,
             )
 
     # --------------------------------------------------------------------------
-    # 9. Technical Specifications & Methodology Drawer
+    # 9. Compact Research Metrics Row
     # --------------------------------------------------------------------------
-    st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
-    with st.expander("Technical Architecture, Sampling Rationale & Evaluation Methodology", expanded=False):
-        t_col1, t_col2 = st.columns(2, gap="medium")
-        with t_col1:
-            st.markdown(
-                """
-                **1. Class Imbalance & Mild Sampling Strategy:**  
-                The primary challenge in dermoscopic classification is extreme distribution skew (in HAM10000, Melanocytic Nevi represent ~67% of all cases).
-                Standard training yields deceptive overall accuracy while severely failing on rare, lethal malignancies (`mel`, `bcc`).
-                The active model employs **mild class-balanced sampling** during fine-tuning, increasing the sampling frequency of underrepresented classes
-                to achieve a balanced accuracy of **50.78%** and macro F1 of **0.5431** without destabilizing feature representations.
+    st.markdown('<div class="section-heading" style="margin-top:1.5rem;">Research Evaluation Metrics</div>', unsafe_allow_html=True)
 
-                **2. Preprocessing & Input Rescaling Pipeline:**  
-                Images undergo EXIF orientation correction, RGB conversion, and bilinear resizing to **224 × 224 × 3** dimensions.
-                Pixel values are retained in the `[0.0, 255.0]` range because the EfficientNetB0 backbone internally incorporates input normalization and rescaling layers.
-                """
-            )
-        with t_col2:
-            st.markdown(
-                """
-                **3. Closed-Set Softmax vs. Calibrated Clinical Risk:**  
-                The network's final layer applies a softmax activation over a closed set of 7 dermatological entities.
-                Outputs inherently sum to 1.0 (100%), which means that even out-of-distribution inputs (e.g. hair, pen markings, photographic artifacts)
-                will be forced into one of the 7 classes with high artificial confidence. Softmax output should be treated as feature correlation, not Bayesian diagnosis.
+    st.markdown(
+        f"""
+        <div class="metric-grid">
+            <div class="metric-cell">
+                <div class="metric-cell-label">Validation Accuracy</div>
+                <div class="metric-cell-value">{BENCHMARK_METRICS['validation_accuracy'] * 100:.2f}%</div>
+            </div>
+            <div class="metric-cell">
+                <div class="metric-cell-label">Macro F1 Score</div>
+                <div class="metric-cell-value">{BENCHMARK_METRICS['macro_f1']:.4f}</div>
+            </div>
+            <div class="metric-cell">
+                <div class="metric-cell-label">Balanced Accuracy</div>
+                <div class="metric-cell-value">{BENCHMARK_METRICS['balanced_accuracy'] * 100:.2f}%</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-                **4. Out-of-Distribution Sensitivity & Clinical Preconditions:**  
-                Model validity relies strictly on standardized dermoscopic imaging protocols (dermatoscope with immersion fluid or cross-polarized illumination).
-                Unstandardized consumer smartphone photography, poor focal depth, shadows, and non-cutaneous lesions violate distribution bounds.
-                """
-            )
+    st.caption(
+        "Benchmark results on the HAM10000 validation split. "
+        "Because benign melanocytic nevi comprise ~67% of samples, Macro F1 and Balanced Accuracy provide accurate sensitivity evaluation across minority classes."
+    )
 
     # --------------------------------------------------------------------------
-    # 10. Research Footer
+    # 10. Technical Architecture Details
+    # --------------------------------------------------------------------------
+    with st.expander("Technical Architecture & Methodology Details", expanded=False):
+        t1, t2 = st.columns(2, gap="medium")
+        with t1:
+            st.markdown(
+                """
+                **Class Imbalance & Sampling Strategy:**  
+                Standard training on HAM10000 yields high nominal accuracy but low recall on rare, critical classes (`mel`, `bcc`).
+                Mild class-balanced sampling increases minority-class sampling frequency during fine-tuning, achieving **50.78%** balanced accuracy and **0.5431** macro F1.
+
+                **Input Preprocessing:**  
+                Images undergo EXIF orientation correction, RGB conversion, and bilinear resizing to **224 × 224 × 3**.
+                Pixel values remain in `[0.0, 255.0]` (internal EfficientNet rescaling).
+                """
+            )
+        with t2:
+            st.markdown(
+                """
+                **Closed-World Softmax Assumption:**  
+                Softmax probabilities sum to 100% across the 7 closed categories. High confidence does not imply calibrated posterior probability.
+
+                **Out-of-Distribution Preconditions:**  
+                The network expects standardized magnified dermoscopy. Consumer camera images, poor illumination, or non-skin imagery violate distribution bounds.
+                """
+            )
+
+    # --------------------------------------------------------------------------
+    # 11. Minimal Footer
     # --------------------------------------------------------------------------
     st.markdown(
         f"""
         <div class="workbench-footer">
-            <strong>Skin Lesion Classification Research Platform</strong> · Academic Portfolio Artifact<br>
-            Backbone: EfficientNetB0 (Fine-Tuned) · Weights: <code>{model_basename}</code> · Evaluation Split: HAM10000<br>
-            <em>Educational and research demonstration only. Not cleared or intended for clinical diagnostics or patient care.</em>
+            Skin Lesion Classification Research Workbench · EfficientNetB0 ({BENCHMARK_METRICS['sampling_strategy']})<br>
+            <em>Strictly for educational and research demonstration. Not cleared for medical diagnosis or clinical use.</em>
         </div>
         """,
         unsafe_allow_html=True,
